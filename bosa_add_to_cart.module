@@ -106,7 +106,11 @@ function bosa_add_to_cart_form($form, &$form_state) {
         '#markup' => $price,
         '#suffix' => "</div>",
       );
-      if ($second_price = $wrapper->field_2nd_price->amount->value()) {
+      if ($wrapper->field_2nd_price->value()) {
+        $second_price = $wrapper->field_2nd_price->amount->value();
+        $current_currency = commerce_multicurrency_get_user_currency_code();
+        $second_price = commerce_currency_convert($second_price, "DKK", $current_currency);
+        $converted_price = commerce_currency_format($second_price, $current_currency, $product);
         $form['bosa_add_to_cart'][$prod_id."_2"] = array(
           '#type' => 'fieldset',
           '#prefix' => '<div class="bosa-product-reference_row_2" style="background-color: #fff;">',
@@ -118,12 +122,12 @@ function bosa_add_to_cart_form($form, &$form_state) {
                         <div class= "pladser" style="min-height:10px;"></div>
                         <div class= "pris">',
           '#type' => 'item',
-          '#markup' => $second_price." - ". t('children'),
+          '#markup' => $converted_price." - ". t('children'),
           '#suffix' => "</div>",
         );
       }
     }
-    if ($second_price = $wrapper->field_2nd_price->value()) {
+    if ($wrapper->field_2nd_price->value()) {
       $title = t('Adults');
     }
     else $title = t('Antal');
