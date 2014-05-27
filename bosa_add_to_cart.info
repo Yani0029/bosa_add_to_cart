@@ -1,0 +1,5 @@
+name = BOSA Add to cart form
+description = Product add to cart form block
+core = 7.x
+version = "7.x-0.1-dev"
+dependencies[] = commerce
