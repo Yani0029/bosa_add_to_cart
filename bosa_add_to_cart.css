@@ -1,0 +1,29 @@
+/**************
+  Offer Bosa add to cart form
+*****************/
+.pane-block.pane-bosa-add-to-cart-bosa-add-to-cart {width: 100%;}
+.bosa-product-reference {
+  clear: both;
+  width: 100%;
+  margin: 0px 0 20px 0px;
+}
+.bosa-product-reference .fieldset-wrapper {width: 100%}
+.bosa-product-reference div {
+}
+.bosa-product-reference .product-checkbox {min-height: 10px;float: left; width: 10%; clear:left;}
+.bosa-product-reference .dato {float: left;width: 40%}
+.bosa-product-reference .pladser {float: left;width: 15%}
+.bosa-product-reference .pris {float: left;width: 35%}
+.bosa_cart_amount {clear:both;}
+.bosa_cart_amount label {display:inline-block; width: 10%;}
+#edit-bosa-add-to-cart {background-color:#efeeea;}
+.bosa-product-reference_row {border: 2px solid #fff;}
+.bosa-product-parts {display: none;}
+#edit-bosa-add-cart-3 {width: 98%;}
+.pane-bosa-add-to-cart-bosa-add-to-cart {
+  margin-left: 10px;
+  font-family: 'Soho Gothic Regular', 'Cambria W02 Regular', 'Cambria W10 Regular', sans-serif;
+  clear: left;
+  padding-top: 20px;
+}
+.pane-bosa-add-to-cart-bosa-add-to-cart h2{margin: 10px 0;}
