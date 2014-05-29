@@ -4,11 +4,11 @@
  *
  * @author Yani Xu <yx@bellcom.dk>
  * @version $0.1
- * @copyright 2014 bellcom open source aps
+ * @copyright 2014 bellcom open source aps.
  **/
 
 /*
- * Implements hook_block_info
+ * Implements hook_block_info.
  */
 function bosa_add_to_cart_block_info() {
   $blocks['bosa_add_to_cart'] = array(
@@ -18,10 +18,9 @@ function bosa_add_to_cart_block_info() {
 }
 
 /*
- * Implements hook_block_view
+ * Implements hook_block_view.
  */
 function bosa_add_to_cart_block_view($delta = '') {
-
   switch ($delta) {
     case 'bosa_add_to_cart':
       if (arg(0) == 'node') {
@@ -31,56 +30,57 @@ function bosa_add_to_cart_block_view($delta = '') {
         }
       }
       if($products = field_get_items('node',$node,'field_reference')) {
+        // Get bosa_add_to_cart_form to the block.
         $block['content'] = drupal_get_form('bosa_add_to_cart_form');
       }
-      
       break;
   }
   return $block;
 }
-
+/**
+ * bosa_add_to_cart_form
+ */
 function bosa_add_to_cart_form($form, &$form_state) {
+  drupal_add_js(drupal_get_path('module', 'bosa_add_to_cart') . '/bosa_add_to_cart.js');
+  drupal_add_css(drupal_get_path('module', 'bosa_add_to_cart') . '/bosa_add_to_cart.css');
+  $form_elements = array();
   if (arg(0) == 'node') {
     $nid = arg(1);
     if ($nid && is_numeric($nid)) {
       $node = node_load($nid);
+      // Get product info to builde the form.
+      $form_elements = bosa_add_to_cart_products_builder($node);
     }
   }
-  $form['bosa_add_to_cart'] = array(
-    '#type' => 'fieldset',
-    '#prefix' => '<div style="width:98%;overflow:hidden;">
-                 <div class="bosa-product-reference" style= "border-bottom: 1px solid #e3e3e3; height: 20px;margin-bottom:5px; font-weight: bold;">
-                 <div class="product-checkbox"></div>
-                 <div class="dato">Dato og tidspunkt:</div>
-                 <div class="pladser">Pladser:</div>
-                 <div class="pris">Pris:</div></div>
-                 <div class="bosa-product-reference">',
-    '#suffix' => '</div></div>',
-    '#tree' => true,
 
-  );
-  if($products = field_get_items('node',$node,'field_reference')) {
-    foreach ($products as $product) {
-      $prod_id = $product['product_id'];
-      $product = commerce_product_load($prod_id);
-      $wrapper = entity_metadata_wrapper('commerce_product', $product);
-      $date = $wrapper->field_offer_dato->value();
-      if ($date < time()) {
-        continue;
+  if(count($form_elements) > 0) {
+    $form['bosa_add_to_cart'] = array(
+      '#type' => 'fieldset',
+      '#prefix' => '<div style="width:98%;overflow:hidden;">
+                    <div class="bosa-product-reference" style= "border-bottom: 1px solid #e3e3e3; height: 20px;margin-bottom:5px; font-weight: bold;">
+                    <div class="product-checkbox"></div>
+                    <div class="dato">Dato og tidspunkt:</div>
+                    <div class="place">Pladser:</div>
+                    <div class="price">Pris:</div></div>
+                    <div class="bosa-product-reference">',
+      '#suffix' => '</div></div>',
+      '#tree' => true,
+    );
+    foreach($form_elements as $key => $elements) {
+      $prod_id = $elements['prod_id'];
+      $date = $elements['date'];
+      $stock = $elements['stock'];
+      $price = $elements['price'];
+      $second_price = $elements['price_2'];
+      $prefix_class = 'bosa-product-reference_row';
+      // Display only the first 6 products. bosa-product-parts class with display:none.
+      if($key >= 6) {
+        $part = floor($key/6);
+        $prefix_class = 'bosa-product-reference_row bosa-product-parts bosa_part_' . $part;
       }
-
-      $date = date('D, d/m/Y - H:i', $date);
-      $stock = $wrapper->commerce_stock->value();
-
-      $price_1 = commerce_product_calculate_sell_price($product);
-      $price = commerce_currency_format($price_1['amount'], $price_1['currency_code'], $product);
-      /*$form['bosa_add_to_cart']['add_to_cart_node_id'] = array(
-        '#type' => 'hidden',
-        '#value' => $nid,
-      );*/
       $form['bosa_add_to_cart'][$prod_id] = array(
         '#type' => 'fieldset',
-        '#prefix' => '<div class="bosa-product-reference_row">',
+        '#prefix' => '<div class="' . $prefix_class .'">',
         '#suffix' => '</div>',
       );
       $form['bosa_add_to_cart'][$prod_id]['selected'] = array(
@@ -95,42 +95,46 @@ function bosa_add_to_cart_form($form, &$form_state) {
         '#suffix' => "</div>",
       );
       $form['bosa_add_to_cart'][$prod_id]['bosa_add_to_cart_stock_'.$prod_id] = array(
-        '#prefix' => '<div class= "pladser">',
+        '#prefix' => '<div class= "place">',
         '#type' => 'item',
         '#markup' => $stock." stk",
         '#suffix' => "</div>",
       );
-      $form['bosa_add_to_cart'][$prod_id]['bosa_add_to_cart_price_'.$prod_id] = array(
-        '#prefix' => '<div class= "pris">',
+      $form['bosa_add_to_cart'][$prod_id]['bosa_add_to_cart_price_'.$prod_id] =
+      array(
+        '#prefix' => '<div class= "price">',
         '#type' => 'item',
         '#markup' => $price,
         '#suffix' => "</div>",
       );
-      if ($wrapper->field_2nd_price->value()) {
-        $second_price = $wrapper->field_2nd_price->amount->value();
-        $current_currency = commerce_multicurrency_get_user_currency_code();
-        $second_price = commerce_currency_convert($second_price, "DKK", $current_currency);
-        $converted_price = commerce_currency_format($second_price, $current_currency, $product);
+      if ($second_price) {
         $form['bosa_add_to_cart'][$prod_id."_2"] = array(
           '#type' => 'fieldset',
-          '#prefix' => '<div class="bosa-product-reference_row_2" style="background-color: #fff;">',
+          '#prefix' => '<div class="'. $prefix_class .'" style="background-color: #fff; border:none;">',
           '#suffix' => '</div>',
         );
         $form['bosa_add_to_cart'][$prod_id."_2"]['bosa_add_to_cart_child_'.$prod_id] = array(
           '#prefix' => '<div class= "product-checkbox"></div>
                         <div class= "dato" style="min-height: 10px"></div>
-                        <div class= "pladser" style="min-height:10px;"></div>
-                        <div class= "pris">',
+                        <div class= "place" style="min-height:10px;"></div>
+                        <div class= "price">',
           '#type' => 'item',
-          '#markup' => $converted_price." - ". t('children'),
+          '#markup' => $second_price." - ". t('children'),
           '#suffix' => "</div>",
         );
       }
+
+      if ($second_price) {
+        $title = t('Adults');
+      }
+      else $title = t('Antal');
     }
-    if ($wrapper->field_2nd_price->value()) {
-      $title = t('Adults');
+    if (count($form_elements) > 6) {
+      $form['bosa_add_cart_3'] = array(
+        '#type' => 'item',
+        '#markup' => '<a class="right bosa_view_more" id="' . $nid . '" href="#">'.t('Vis mere'). '</a>',
+      );
     }
-    else $title = t('Antal');
     $form['bosa_add_to_cart_2']['bosa_adults_amount'] = array(
       '#type' => 'textfield',
       '#prefix' => '<div class= "bosa_cart_amount">',
@@ -139,7 +143,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
       '#default_value' => 1,
       '#suffix' => '</div>'
     );
-    if ($second_price = $wrapper->field_2nd_price->value()) {
+    if ($title != 'Antal') {
       $form['bosa_add_to_cart_2']['bosa_children_amount'] = array(
         '#type' => 'textfield',
         '#prefix' => '<div class= "bosa_cart_amount">',
@@ -148,7 +152,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
         '#default_value' => 1,
         '#suffix' => '</div>'
      );
-   }
+    }
     $form['submit'] = array(
       '#type' => 'submit',
       '#attributes' => array(
@@ -157,6 +161,42 @@ function bosa_add_to_cart_form($form, &$form_state) {
     );
     return $form;
   }
+}
+
+function bosa_add_to_cart_products_builder($node) {
+  if (!is_object($node))
+    return;
+  $form_elements = array();
+  if($products = field_get_items('node',$node,'field_reference')) {
+    foreach ($products as $prod) {
+      $prod_id = $prod['product_id'];
+      $product = commerce_product_load($prod_id);
+      $wrapper = entity_metadata_wrapper('commerce_product', $product);
+      $date = $wrapper->field_offer_dato->value();
+      if ($date < time()) {
+        continue;
+      }
+      $date = date('D, d/m/Y - H:i', $date);
+      $stock = $wrapper->commerce_stock->value();
+      $price_1 = commerce_product_calculate_sell_price($product);
+      $price = commerce_currency_format($price_1['amount'], $price_1['currency_code'], $product);
+
+      if ($wrapper->field_2nd_price->value()) {
+        $second_price = $wrapper->field_2nd_price->amount->value();
+        $current_currency = commerce_multicurrency_get_user_currency_code();
+        $second_price = commerce_currency_convert($second_price, "DKK", $current_currency);
+        $converted_price = commerce_currency_format($second_price, $current_currency, $product);
+      }
+      $form_elements[] = array(
+        'prod_id' => $prod_id,
+        'date' => $date,
+        'stock' => $stock,
+        'price' => $price,
+        'price_2' => isset($converted_price) ? $converted_price : 0,
+      );
+    }
+  }
+  return $form_elements;
 }
 
 function bosa_add_to_cart_form_submit($form, &$form_state) {
@@ -168,29 +208,37 @@ function bosa_add_to_cart_form_submit($form, &$form_state) {
     if($value['selected'] && $adults) {
       $product = commerce_product_load($prod_id);
       $line_item = commerce_product_line_item_new($product,$adults,0);
-      commerce_line_item_save($line_item);
-      commerce_cart_product_add($user->uid, $line_item, FALSE);
+      //commerce_line_item_save($line_item);
+      commerce_cart_product_add($user->uid, $line_item, 0);
     }
     if ($value['selected'] && $children) {
       $product = commerce_product_load($prod_id);
-      $line_item = commerce_product_line_item_new($product,$children,0);
-      $line_item = _bosa_product_alter_price_for_children($line_item, $product);
-      //commerce_line_item_save($line_item);
-      commerce_cart_product_add($user->uid, $line_item, FALSE);
+      _bosa_add_to_cart_price_for_children($product,$children);
     }
     if($value['selected']) {
       $prod_ids[] = $prod_id;
     }
   }
   if(count($prod_ids) == 0) {
-    drupal_set_message(t('Du har ikke valgt et produkt.'));
+    drupal_set_message(t('You have not selected a product.'));
   }
 }
+/**
+ * Alter price for children, see bosa_lineitem.module
+ * 
+ * @see bosa_lineitem_add_2nd_price_to_cart_submit()
+ * @see also bosa_lineitem_commerce_product_calculate_sell_price_line_item_alter()
+ * @see also bosa_lineitem_commerce_cart_line_item_refresh()
+ * https://github.com/bellcom/bosa/blob/master/bosa_lineitem/bosa_lineitem.module
+ */
+function _bosa_add_to_cart_price_for_children($product,$children){
+  global $user;
+  $line_item = commerce_product_line_item_new($product,$children,0);
+  commerce_line_item_save($line_item);
 
-function _bosa_product_alter_price_for_children($line_item,$product){
   $current_currency = commerce_multicurrency_get_user_currency_code();
   $wrapper = entity_metadata_wrapper('commerce_product', $product);
-  
+
   $price = $wrapper->field_2nd_price->amount->value();
   $converted_price = commerce_currency_convert($price, "DKK", $current_currency);
 
@@ -210,9 +258,9 @@ function _bosa_product_alter_price_for_children($line_item,$product){
       ),
     ),
   );
-
   // we want to be able to see that this product has been sold with the other price
   // this is used later on when we set the price again
-  $line_item_wrapper->field_line_item_comment = t('Children');
-  return $line_item;
+  $line_item_wrapper->field_line_item_comment = t('Anden pris');
+  commerce_line_item_save($line_item);
+  commerce_cart_product_add($user->uid, $line_item, 0);
 }
