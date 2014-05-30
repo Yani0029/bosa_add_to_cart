@@ -14,11 +14,13 @@
 .bosa-product-reference .dato {float: left;width: 40%}
 .bosa-product-reference .place {float: left;width: 15%}
 .bosa-product-reference .price {float: left;width: 35%}
-.bosa_cart_amount {clear:both;}
+.bosa_cart_amount {clear:both; position: relative;}
 .bosa_cart_amount label {display:inline-block; width: 10%;}
 #edit-bosa-add-to-cart {background-color:#efeeea;}
 .bosa-product-reference_row {border-top: 2px solid #fff;}
+.bosa_view_earlier,
 .bosa-product-parts {display: none;}
+.bosa_part_0 {display: block;}
 #edit-bosa-add-cart-3 {width: 98%;}
 .pane-bosa-add-to-cart-bosa-add-to-cart {
   margin-left: 10px;
@@ -27,3 +29,12 @@
   padding-top: 20px;
 }
 .pane-bosa-add-to-cart-bosa-add-to-cart h2{margin: 10px 0;}
+#edit-bosa-add-cart-4 {min-height: 10px; margin-bottom: 20px;}
+.text_price {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+}
+#edit-total-price {display: inline-block; font-size: 20px; font-weight: bold;}
+#edit-bosa-add-cart-3 a, #edit-bosa-add-cart-4 a { color: #7f0006;}
+#edit-bosa-add-cart-3 a:hover, #edit-bosa-add-cart-4 a:hover { color: red !important;}
