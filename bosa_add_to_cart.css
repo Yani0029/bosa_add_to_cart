@@ -35,6 +35,6 @@
   right: 10px;
   top: 8px;
 }
-#edit-total-price {display: inline-block; font-size: 20px; font-weight: bold;}
+#edit-total-price {display: inline-block; font-size: 18px; font-weight: bold;}
 #edit-bosa-add-cart-3 a, #edit-bosa-add-cart-4 a { color: #7f0006;}
 #edit-bosa-add-cart-3 a:hover, #edit-bosa-add-cart-4 a:hover { color: red !important;}
