@@ -110,10 +110,16 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#markup' => $date,
           '#suffix' => "</div>",
         );
+        if ($stock != "") {
+          $stock .= " stk";
+        }
+        else {
+          $stock = "";
+        }
         $form['bosa_add_to_cart'][$prod_id][$key][1]['bosa_add_to_cart_stock_'.$prod_id] = array(
           '#prefix' => '<div class= "place">',
           '#type' => 'item',
-          '#markup' => $stock." stk",
+          '#markup' => $stock,
           '#suffix' => "</div>",
         );
       $form['bosa_add_to_cart'][$prod_id][$key][1]['bosa_add_to_cart_price_'.$prod_id] =
@@ -197,9 +203,14 @@ function bosa_add_to_cart_products_builder($node) {
       $prod_id = $prod['product_id'];
       $product = commerce_product_load($prod_id);
       $wrapper = entity_metadata_wrapper('commerce_product', $product);
-
-      $date = $wrapper->field_offer_dato->value();
-      $stock = $wrapper->commerce_stock->value();
+      if (isset($wrapper->field_offer_dato)) {
+        $date = $wrapper->field_offer_dato->value();
+        $stock = $wrapper->commerce_stock->value();
+      }
+      else {
+        $date = "";
+        $stock ="";
+      }
       $price_1 = commerce_product_calculate_sell_price($product);
       $price = commerce_currency_format($price_1['amount'], $price_1['currency_code'], $product);
       if ($wrapper->field_2nd_price->value()) {
@@ -218,11 +229,16 @@ function bosa_add_to_cart_products_builder($node) {
         $form_elements = bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,$price_1['amount'],$converted_price,$second_price,$form_elements);
         continue;
       }
-      if ($date < time()) {
+      if ($date < time() && $date != "") {
         continue;
       }
-      $date = date('D, d/m/Y - H:i', $date);
-      $form_elements[$prod_id] = array(
+      if ($date != "") {
+        $date = date('D, d/m/Y - H:i', $date);
+      }
+      else {
+        $date = $product->title;
+      }
+      $form_elements[$prod_id][0] = array(
         'prod_id' => $prod_id,
         'date' => $date,
         'stock' => $stock,
@@ -266,12 +282,20 @@ function bosa_add_to_cart_form_submit($form, &$form_state) {
     $product = commerce_product_load($prod_id);
 
     $wrapper = entity_metadata_wrapper('commerce_product', $product);
-    $date = $wrapper->field_offer_dato->value();
+    if (isset($wrapper->field_offer_dato)) {
+      $date = $wrapper->field_offer_dato->value();
+    }
+    else {
+      $date ="";
+    }
     if(count($date) > 1) {
       $selected_date = date('d/m/Y - H:i',$date[$key]);
     }
-    else {
+    elseif($date != "") {
       $selected_date = date('d/m/Y - H:i',$date[0]);
+    }
+    else {
+      $selected_date = "";
     }
     if ($select && $adults) {
       $line_item = commerce_product_line_item_new($product,$adults,0);
