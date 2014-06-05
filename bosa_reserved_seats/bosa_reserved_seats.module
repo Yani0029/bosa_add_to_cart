@@ -145,9 +145,8 @@ function bosa_reserved_bosa_product_order_info($product,$date,$key = NULL){
  
           // Disable the product, so customers cant buy it again, 
           // and the refund action is not triggered again
-          $item['product_status'] = 0;
+          $product->field_product_date_and_stock['und'][$key]['product_status'] = 0;
           commerce_product_save($product);
-
         }
       }
     }
