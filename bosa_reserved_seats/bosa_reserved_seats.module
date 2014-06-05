@@ -8,11 +8,13 @@
  **/
 
 /**
- *
+ * @param $date : format - Unix timestamp
+ * @param $key : the place no of the date field. like : ['und'][$key]['value']
  */
 function bosa_reserved_seats_available($product_id,$date = NULL,$key = NULL){
   $product = commerce_product_load($product_id);
-  // The new product that contains product date and stock
+
+  // The new product type "BOSA product" that contains product date and stock
   if(isset($product->field_product_date_and_stock)) {
 
     $date = date('d/m/Y - H:i',$date);
@@ -32,7 +34,6 @@ function bosa_reserved_seats_available($product_id,$date = NULL,$key = NULL){
     else {
       $seats = (int)($info[$key]['product_stock'] - $count);
     }
-
     return $seats;
     break;
   }
@@ -56,4 +57,99 @@ function bosa_reserved_seats_available($product_id,$date = NULL,$key = NULL){
     return "all";
   }
 
+}
+
+function bosa_reserved_bosa_product_order_info($product,$date,$key = NULL){
+  $cancel_orders = array();
+  // The new product type "BOSA product" that contains product date and stock
+  if(isset($product->field_product_date_and_stock)) {
+    if ( is_numeric($date) && (int)$date == $date) {
+      $date = date('d/m/Y - H:i',$date);
+    }
+    else {
+      $date = date('d/m/Y - H:i',strtotime($date));
+    }
+    // f.x sku = ®r¿sund
+    $query = db_query('SELECT order_id, line_item_id, quantity FROM `commerce_product`, `commerce_line_item`,
+                    `field_data_field_bosa_selected_date`
+                    WHERE sku = line_item_label and `product_id` = :product_id and `line_item_id` = `entity_id` and `field_bosa_selected_date_value` = :date',
+                    array(':product_id' => $product->product_id, ':date' => $date));
+
+    if($result->rowCount() > 0){
+      foreach($result as $row) {
+        // Load order and check for status.
+        $order = commerce_order_load($row->order_id);
+        if($order->status == 'completed'){
+          $cancel_orders = array(
+            'product_id' => $product->product_id,
+            'order_id' => $row->order_id,
+            'line_item_id' => $row->line_item_id,
+            'quantity' => $row->quantity,
+            'date' => $date,
+          );
+        }
+      }
+    }
+  }
+  return $cancel_orders;
+}
+
+/*
+ * Additional cancel for the new product type "Bosa product" which contains more than one (dates + stock) fields
+ * @see bosa_product_field module
+ * @author Yani Xu <yx@bellcom.dk>
+ */
+ function bosa_reservation_cancel_reservations_bosa_product_type() {
+
+  // fetch activity products
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_product')
+      ->propertyCondition('type', 'bosa_product')
+      ->propertyCondition('status', 1)
+      ->execute();
+
+  $product_ids = array_keys(array_shift($result));
+
+  foreach($product_ids as $product_id) 
+  {
+    $product = commerce_product_load($product_id);
+    $date_stock = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
+    if($last_min = field_get_items('commerce_product', $product, 'field_product_last_mins')) {
+      $last_min = $last_min[0]['value'];
+    }
+    else {
+      $last_min = 0;
+    }
+
+    foreach ($date_stock as $key => $item) {
+      $time_tmp = strtotime($item['product_date']) + $last_min * 60 * 60;
+      // If the time is later than the last date for product selling.
+      if (time() > $time_tmp) {
+        if ($item['product_min_attendee'] == 0 || $item['product_stock'] == 0) {
+          continue;
+        }
+        $seats_available =bosa_reserved_seats_available($product_id,strtotime($item['product_date']),$key);
+        // Return "all" means stock/seat is 0 unlimited.
+        // Some products does NOT contain a minimun attendent number. No need cancellation.
+        if ($seats_available = "all") {
+          continue;
+        }
+        if (($item['product_stock'] - $seats_available) < $item['product_min_attendee']) {
+          // invoke rule event, sending mails
+          // orders = array('product_id','order_id','date','line_item_id','quantity')
+          $orders = bosa_reserved_bosa_product_order_info($product,$item['product_date']);
+          rules_invoke_event('bosa_reservation_bosa_product_close_to_deadline', $product, $item['product_date'], $orders);
+               // Doin some logging
+          watchdog('bosa_reservation', 'cancel product: @product_id, on date: @date',
+               array('@product_id' => $product_id, '@date'=> $item['product_date']), WATCHDOG_NOTICE);
+ 
+          // Disable the product, so customers cant buy it again, 
+          // and the refund action is not triggered again
+          $item['product_status'] = 0;
+          commerce_product_save($product);
+
+        }
+      }
+    }
+  }
 }
