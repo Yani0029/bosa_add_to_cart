@@ -1,6 +1,9 @@
 jQuery(document).ready(function($){
   var qty = $('.bosa-product-reference_row').length;
   var part = Math.floor(qty/6);
+  if (part == 1) {
+    part = 2;
+  }
   $('.bosa_view_later').show();
   $('.bosa_view_later').click(function(event){
     for (var i=0; i<= part; i++) {

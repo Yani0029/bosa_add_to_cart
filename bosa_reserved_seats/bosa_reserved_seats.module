@@ -1,0 +1,59 @@
+<?php
+/**
+ * bosa_reserved_seats module
+ *
+ * @author Yani Xu <yx@bellcom.dk>
+ * @version $0.1
+ * @copyright 2014 bellcom open source aps.
+ **/
+
+/**
+ *
+ */
+function bosa_reserved_seats_available($product_id,$date = NULL,$key = NULL){
+  $product = commerce_product_load($product_id);
+  // The new product that contains product date and stock
+  if(isset($product->field_product_date_and_stock)) {
+
+    $date = date('d/m/Y - H:i',$date);
+    $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
+    $query = db_query('SELECT SUM(quantity) as quantity FROM `commerce_product`, `commerce_line_item`,
+                    `field_data_field_bosa_selected_date`
+                    WHERE sku = line_item_label and `product_id` = :product_id and `line_item_id` = `entity_id` and `field_bosa_selected_date_value` = :date',
+                    array(':product_id' => $product_id, ':date' => $date));
+
+    $result = $query->fetch();
+    if($result){
+      $count = reset($result);
+    }
+    if ($info[$key]['product_stock'] == 0) {
+        $seats = "all";
+    }
+    else {
+      $seats = (int)($info[$key]['product_stock'] - $count);
+    }
+
+    return $seats;
+    break;
+  }
+
+  // Other product type with commerce_stock
+  if($seats_field = field_get_items('commerce_product', $product, 'commerce_stock')){
+    $query = db_query('SELECT SUM(quantity) as quantity FROM `commerce_product`, `commerce_line_item`
+                       WHERE sku = line_item_label and `product_id` = :product_id',
+                      array(':product_id' => $product_id));
+
+    $result = $query->fetch();
+    if($result){
+      $count = reset($result);
+    }
+    $seats = $seats_field[0]['value'];
+    $seats_available = $seats - $count;
+    return (int)$seats_available;
+  }
+  // Product type that does not contain a stock field.
+  else {
+    return "all";
+  }
+
+}

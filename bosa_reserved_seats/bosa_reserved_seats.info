@@ -1,0 +1,6 @@
+name = BOSA Reserved seats
+description = Handle reserved seats/stock
+core = 7.x
+version = "7.x-0.1-dev"
+dependencies[] = commerce
+dependencies[] = bosa_lineitem
