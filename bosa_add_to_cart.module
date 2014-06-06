@@ -57,9 +57,11 @@ function bosa_add_to_cart_form($form, &$form_state) {
   foreach ($form_elements as $pid => $all_elements) {
     foreach($all_elements as $key =>$elements) {
       if($elements['status']){
-      // Get the total product lines.
-      $total += 1;
-      //$total += count($all_elements);
+        // Get the total product lines.
+        $total += 1;
+        $wdate = $elements['wdate'];
+        $title = $elements['date'];
+        //$total += count($all_elements);
       }
     }
     if($all_elements[0]['price_2']) {
@@ -68,6 +70,12 @@ function bosa_add_to_cart_form($form, &$form_state) {
     else {
       $text = '<div class="price">Pris:</div>';
     }
+    if($wdate ) {
+      $text2 = 'Product:';
+    }
+    else {
+      $text2 = 'Dato og tidspunkt:';
+    }
   }
   if(count($form_elements) > 0) {
     $form['bosa_add_to_cart'] = array(
@@ -75,7 +83,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
       '#prefix' => '<div style="width:98%;overflow:hidden;">
                     <div class="bosa-product-reference" style= "border-bottom: 1px solid #e3e3e3; height: 20px;margin-bottom:5px; font-weight: bold;">
                     <div class="product-checkbox"></div>
-                    <div class="dato">Dato og tidspunkt:</div>
+                    <div class="dato">'. $text2.'</div>
                     <div class="place">Pladser:</div>
                     ' . $text . '</div>
                     <div class="bosa-product-reference">',
@@ -131,10 +139,16 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#suffix' => "</div>",
           "#disabled" => $disabled,
         );
+        if($elements['wdate']) {
+          $str = $elements['label'];
+        }
+        else {
+          $str = $date;
+        }
         $form['bosa_add_to_cart'][$prod_id][$key][1]['bosa_add_to_cart_date_'.$prod_id] = array(
           '#prefix' => '<div class= "dato">',
           '#type' => 'item',
-          '#markup' => $date,
+          '#markup' => $str,
           '#suffix' => "</div>",
         );
 
@@ -261,12 +275,14 @@ function bosa_add_to_cart_products_builder($node) {
       // The new "BOSA product" type.
       if(isset($product->field_product_date_and_stock)) {
         $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
+        //$cancel = bosa_reserved_bosa_product_order_info($product,$info[0]['product_date'],$key);
+
         foreach ($info as $key => $value) {
           $date_2 = strtotime($value['product_date']);
           $stock = bosa_reserved_seats_available($prod_id,$date_2,$key);
           $date_2 = date('D, d/m/Y - H:i', $date_2);
           $form_elements = bosa_add_to_cart_make_more_products($prod_id,$date_2,$stock,$price,$price_1['amount'],
-                                                               $converted_price,$second_price,$value['product_status'],$form_elements);
+                                                               $converted_price,$second_price,$value['product_status'],$value['product_wdate'],$form_elements);
         }
         continue;
       }
@@ -277,20 +293,34 @@ function bosa_add_to_cart_products_builder($node) {
       }
       if ($date != "") {
         $date = date('D, d/m/Y - H:i', $date);
+        $wdate = 0;
       }
       // product types "produkt_uden_lager_dato"
       else {
         $date = $product->title;
+        $wdate = 1;
       }
-      $form_elements = bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,$price_1['amount'],
-                                                           $converted_price,$second_price,$form_elements);
+
+      $form_elements[$prod_id][] = array(
+        'prod_id' => $prod_id,
+        'date' => $date,
+        'stock' => $stock,
+        'price' => $price,
+        'price_amount' => $price_amount,
+        'price_2' => isset($price_2) ? $price_2 : 0,
+        'price_2_amount' => $second_price,
+        'label' => $product->title,
+        'status' => $product->status,
+        'wdate' => $wdate,
+      );
     }
   }
   return $form_elements;
 }
 
-function bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,$price_amount,$price_2 = null,$second_price = 0,$status = NULL, $form_elements) {
-
+function bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,
+                                             $price_amount,$price_2 = null,$second_price = 0,$status = NULL,$wdate = NULL, $form_elements) {
+  $product = commerce_product_load($prod_id);
   $form_elements[$prod_id][] = array(
    'prod_id' => $prod_id,
    'date' => $date,
@@ -300,7 +330,10 @@ function bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,$price
    'price_amount' => $price_amount,
    'price_2' => isset($price_2) ? $price_2 : 0,
    'price_2_amount' => $second_price,
+   'wdate' => $wdate,
+   'label' => $product->title,
   );
+
   return $form_elements;
 }
 
