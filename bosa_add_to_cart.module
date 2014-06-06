@@ -64,7 +64,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
         //$total += count($all_elements);
       }
     }
-    if($all_elements[0]['price_2']) {
+    if($all_elements[0]['price_2_amount']) {
       $text = '<div class="adult">Voksen:</div><div class="child">Barn:</div>';
     }
     else {
@@ -143,7 +143,8 @@ function bosa_add_to_cart_form($form, &$form_state) {
           $str = $elements['label'];
         }
         else {
-          $str = $date;
+          $weekday = explode(',',$date);
+          $str = t($weekday[0]) . ", " . $weekday[1];
         }
         $form['bosa_add_to_cart'][$prod_id][$key][1]['bosa_add_to_cart_date_'.$prod_id] = array(
           '#prefix' => '<div class= "dato">',
@@ -164,7 +165,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#markup' => $price,
           '#suffix' => "</div>",
         );
-        if ($price_2) {
+        if ($price_2_amount) {
         $form['bosa_add_to_cart'][$prod_id][$key][1]['bosa_add_to_cart_price2_'.$prod_id] = array(
           '#prefix' => '<div class= "child">',
           '#type' => 'item',
@@ -263,7 +264,6 @@ function bosa_add_to_cart_products_builder($node) {
         $second_price = 0;
         $converted_price = NULL;
       }
-
       // Product type "produkt_uden_lager_dato"
       if (isset($wrapper->field_offer_dato)) {
         $date = $wrapper->field_offer_dato->value();
@@ -306,8 +306,8 @@ function bosa_add_to_cart_products_builder($node) {
         'date' => $date,
         'stock' => $stock,
         'price' => $price,
-        'price_amount' => $price_amount,
-        'price_2' => isset($price_2) ? $price_2 : 0,
+        'price_amount' => $price_1['amount'],
+        'price_2' => $converted_price,
         'price_2_amount' => $second_price,
         'label' => $product->title,
         'status' => $product->status,
