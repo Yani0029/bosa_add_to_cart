@@ -6,6 +6,7 @@
  * @version $0.1
  * @copyright 2014 bellcom open source aps.
  **/
+include('bosa_add_to_cart.seats.inc');
 
 /*
  * Implements hook_block_info.
@@ -108,10 +109,11 @@ function bosa_add_to_cart_form($form, &$form_state) {
         $price_2_amount = $elements['price_2_amount'];
         $prefix_class = 'bosa-product-reference_row bosa_part_0';
         $disabled = FALSE;
-        if($stock == 0) {
+
+        if($stock == 0 && is_numeric($stock)) {
           $disabled = TRUE;
         }
-        if($stock == "all") {
+        if($stock == "all" && !is_numeric($stock)) {
           $stock = "-";
           $disabled = FALSE;
         }
@@ -239,7 +241,9 @@ function bosa_add_to_cart_form($form, &$form_state) {
     return $form;
   }
 }
-
+/*
+ * function that builder form_elements in bosa_add_to_cart_form
+ */
 function bosa_add_to_cart_products_builder($node) {
   if (!is_object($node))
     return;
@@ -275,11 +279,10 @@ function bosa_add_to_cart_products_builder($node) {
       // The new "BOSA product" type.
       if(isset($product->field_product_date_and_stock)) {
         $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
-        //$cancel = bosa_reserved_bosa_product_order_info($product,$info[0]['product_date'],$key);
 
         foreach ($info as $key => $value) {
           $date_2 = strtotime($value['product_date']);
-          $stock = bosa_reserved_seats_available($prod_id,$date_2,$key);
+          $stock = bosa_reserved_seats_available($prod_id,$key);
           $date_2 = date('D, d/m/Y - H:i', $date_2);
           $form_elements = bosa_add_to_cart_make_more_products($prod_id,$date_2,$stock,$price,$price_1['amount'],
                                                                $converted_price,$second_price,$value['product_status'],$value['product_wdate'],$form_elements);
@@ -337,16 +340,40 @@ function bosa_add_to_cart_make_more_products($prod_id,$date,$stock,$price,
   return $form_elements;
 }
 
+function bosa_add_to_cart_form_validate($form, &$form_state){
+  $prod_ids = array();
+  $adults = $form_state['values']['bosa_adults_amount'];
+  $children = isset($form_state['values']['bosa_children_amount']) ? $form_state['values']['bosa_children_amount'] : "-";
+  if (($adults == "-" || $adults == "") && $children == "-") {
+    form_set_error('error', t('You have not input number(s)'));
+  }
+  foreach($form_state['values']['bosa_add_to_cart'] as $prod_id => $prods) {
+    foreach ($prods as $key => $prod) {
+      $select = $prod[1]['selected'];
+      if($select) {
+        $product = commerce_product_load($prod_id);
+        $seats = bosa_reserved_seats_available($prod_id, $key);
+        if($seats <= 0 && $seats != "all") {
+          form_set_error('error', t('Der er ingen pladser tilbage'));
+        }
+        if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "all") {
+          form_set_error('error',t('The maximum quantity of '. $product->title . " that can be purchased is ". $seats));
+        }
+        $prod_ids[] = $key;
+      }
+    }
+  }
+  if(count($prod_ids) == 0) {
+    form_set_error('error',t('You have not selected a product.'));
+  }
+}
+
 function bosa_add_to_cart_form_submit($form, &$form_state) {
   global $user;
   $prod_ids = array();
   $adults = $form_state['values']['bosa_adults_amount'];
   $children = isset($form_state['values']['bosa_children_amount']) ? $form_state['values']['bosa_children_amount'] : "-";
-  if ($adults == "-" && $children == "-") {
-    drupal_set_message(t('You have not input numbers.'),'warning');
-    return;
-  }
-  elseif($adults == "-" && $children != "-") {
+  if($adults == "-" && $children != "-") {
     $adults = 0;
   }
   elseif($adults != "-" && $children == "-") {
@@ -355,41 +382,36 @@ function bosa_add_to_cart_form_submit($form, &$form_state) {
 
   foreach($form_state['values']['bosa_add_to_cart'] as $prod_id => $prods) {
     foreach ($prods as $key => $prod) {
-    $select = $prod[1]['selected'];
-    $product = commerce_product_load($prod_id);
+      $select = $prod[1]['selected'];
+      $product = commerce_product_load($prod_id);
 
-    $wrapper = entity_metadata_wrapper('commerce_product', $product);
-    if (isset($wrapper->field_offer_dato)) {
-      $date = $wrapper->field_offer_dato->value();
-      $selected_date = date('d/m/Y - H:i',$date);
-    }
-    elseif ($info = field_get_items('commerce_product', $product, 'field_product_date_and_stock')) {
-      $prod_delta = $key;
-      $selected_date = date('d/m/Y - H:i',strtotime($info[$key]['product_date']));
-    }
-    else {
-      $selected_date = "";
-      $prod_delta = 0;
+      $wrapper = entity_metadata_wrapper('commerce_product', $product);
+      if (isset($wrapper->field_offer_dato)) {
+        $date = $wrapper->field_offer_dato->value();
+        $selected_date = date('d/m/Y - H:i',$date);
+      }
+      elseif ($info = field_get_items('commerce_product', $product, 'field_product_date_and_stock')) {
+        $prod_delta = $key;
+        $selected_date = date('d/m/Y - H:i',strtotime($info[$key]['product_date']));
+      }
+      else {
+        $selected_date = "";
+        $prod_delta = 0;
 
+      }
+      if ($select && $adults) {
+
+        $line_item = commerce_product_line_item_new($product,$adults,0);
+        $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
+        $line_item_wrapper->field_bosa_selected_date = $selected_date;
+        $line_item_wrapper->field_bosa_product_delta = $prod_delta;
+        commerce_line_item_save($line_item);
+        commerce_cart_product_add($user->uid, $line_item, 0);
+      }
+      if ($select && $children) {
+        _bosa_add_to_cart_price_for_children($product,$children,$selected_date,$prod_delta);
+      }
     }
-    if ($select && $adults) {
-      $line_item = commerce_product_line_item_new($product,$adults,0);
-      $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
-      $line_item_wrapper->field_bosa_selected_date = $selected_date;
-      $line_item_wrapper->field_bosa_product_delta = $prod_delta;
-      commerce_line_item_save($line_item);
-      commerce_cart_product_add($user->uid, $line_item, 0);
-    }
-    if ($select && $children) {
-      _bosa_add_to_cart_price_for_children($product,$children,$selected_date,$prod_delta);
-    }
-    if($select) {
-      $prod_ids[] = $prod_array[0];
-    }
-  }
-  }
-  if(count($prod_ids) == 0) {
-    drupal_set_message(t('You have not selected a product.'),'warning');
   }
 }
 /**
@@ -433,4 +455,80 @@ function _bosa_add_to_cart_price_for_children($product,$children,$selected_date 
    $line_item_wrapper->field_bosa_product_delta = $prod_delta;
   commerce_line_item_save($line_item);
   commerce_cart_product_add($user->uid, $line_item, 0);
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function bosa_add_to_cart_form_alter(&$form, &$form_state,$form_id) {
+  if ($form_id == 'commerce_checkout_form_checkout') {
+    // Add validate function to the checkout form
+    $form['buttons']['continue']['#validate'][] = 'bosa_add_to_cart_cart_form_default_validate';
+  }
+  if ($form_id == 'commerce_checkout_form_review') {
+    // Add validate function to the review form
+    // /@todo: would be good to prompt the user with some contextual info
+    // as he was about to pay
+    $form['buttons']['continue']['#validate'][] = 'bosa_add_to_cart_cart_form_default_validate';
+  }
+
+}
+/**
+ * Implements hook_commerce_checkout_pane_info().
+ * check product seats.
+ * Should be placed on the first stage of checkout.
+ * if there is an error then redirects
+ * to the cart.
+ */
+function bosa_add_to_cart_commerce_checkout_pane_info() {
+  $checkout_panes = array();
+  $checkout_panes['seats_validation_checkout_pane'] = array(
+    'title' => t('check if all items are in stock at checkout'),
+    'base' => 'bosa_add_to_cart_commerce_checkout_pane',
+    'page' => 'checkout',
+    'fieldset' => FALSE,
+  );
+  return $checkout_panes;
+}
+
+/*
+ * The seats checkout pane form: call validation when
+ * displaying the form this will alow us to redirect the user
+ * before he starts checkout
+ */
+function bosa_add_to_cart_commerce_checkout_pane_checkout_form($form, &$form_state, $checkout_pane, $order) {
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $form_state['order']);
+  bosa_add_to_cart_cart_form_default_validate($form,$form_state,$order);
+}
+/**
+ * Validation handler for update cart. Check if there are any available seats.
+ */
+function bosa_add_to_cart_cart_form_default_validate($form, $form_state,$order) {
+  $found_errors = FALSE;
+  // Check each line item
+  foreach ($order->commerce_line_items['und'] as $index => $line) {
+    $line_item = commerce_line_item_load($line['line_item_id']);
+    $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
+    $product_id = $line_item_wrapper->commerce_product->product_id->value();
+    $product = commerce_product_load($product_id);
+    $delta = $line_item_wrapper->field_bosa_product_delta->value();
+    $seats = bosa_reserved_seats_available($product_id,$delta);
+    if($cancel_info = bosa_reserved_bosa_product_order_info($product_id,$delta)) {
+        foreach($cancel_info as $cancel) {
+          $attendee += $cancel['quantity'];
+        }
+    }
+    if ($seats < 0) {
+      form_set_error("seats_error", t('The minimum quantity of %title that can be purchased is %max.',
+                                      array('%title' => $product->title, '%max' => $attendee)));
+      $found_errors = TRUE;
+    }
+  }
+  // if out of stock items send back to the cart form
+  if ($found_errors) {
+    drupal_set_message(t('Please adjust quantities before continuing to checkout.') );
+    $cart_url = url('cart', array('absolute' => TRUE));
+    drupal_goto( $cart_url);
+  }
+
 }
