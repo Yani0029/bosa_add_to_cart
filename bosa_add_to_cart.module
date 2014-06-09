@@ -279,8 +279,14 @@ function bosa_add_to_cart_products_builder($node) {
       // The new "BOSA product" type.
       if(isset($product->field_product_date_and_stock)) {
         $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
+        $last_min = field_get_items('commerce_product', $product, 'field_product_last_mins');
 
         foreach ($info as $key => $value) {
+          $time_tmp = strtotime($value['product_date']) - $last_min[0]['value'] * 60 * 60;
+          // If the time is later than the last date for product selling.
+          if (time() > $time_tmp && !$value['product_wdate']) {
+            continue;
+          }
           $date_2 = strtotime($value['product_date']);
           $stock = bosa_reserved_seats_available($prod_id,$key);
           $date_2 = date('D, d/m/Y - H:i', $date_2);
