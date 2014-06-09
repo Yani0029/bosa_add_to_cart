@@ -13,13 +13,15 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
   // The new product type "BOSA product" that contains product date and stock
   if(isset($product->field_product_date_and_stock)) {
     $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
-    $query = db_query('SELECT SUM(quantity) AS quantity FROM `commerce_product`, `commerce_line_item`,
+    $query = db_query('SELECT SUM(quantity) AS quantity FROM `commerce_product` p, `commerce_line_item` l,`commerce_order` o,
                       `field_data_field_bosa_product_delta`
                        WHERE sku = line_item_label
+                       AND o.`status` <> :canceled
+                       AND o.order_id = l.order_id
                        AND `product_id` = :product_id
                        AND`line_item_id` = `entity_id`
                        AND `field_bosa_product_delta_value` = :delta',
-                    array(':product_id' => $product_id, ':delta' => $delta));
+                    array(':canceled' => 'canceled',':product_id' => $product_id, ':delta' => $delta));
 
     $result = $query->fetch();
     if($result){
@@ -38,9 +40,11 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
 
   // Other product type with commerce_stock
   if($seats_field = field_get_items('commerce_product', $product, 'commerce_stock')){
-    $query = db_query('SELECT SUM(quantity) as quantity FROM `commerce_product`, `commerce_line_item`
-                       WHERE sku = line_item_label and `product_id` = :product_id',
-                      array(':product_id' => $product_id));
+    $query = db_query('SELECT SUM(quantity) as quantity FROM `commerce_product` p, `commerce_line_item`l,`commerce_order` o
+                       WHERE p.sku = l.line_item_label AND o.`status` <> :canceled
+                       AND o.order_id = l.order_id
+                       AND `product_id`= :product_id',
+                      array(':canceled' => 'canceled',':product_id' => $product_id));
 
     $result = $query->fetch();
     if($result){
@@ -62,7 +66,7 @@ function bosa_reserved_bosa_product_order_info($product_id,$delta = NULL){
   $product = commerce_product_load($product_id);
   $cancel_orders = array();
   // The new product type "BOSA product" that contains multiple product-date and stock
-  if($product->type = 'bosa_produkt') {
+  if($product->type == 'bosa_produkt') {
     $query = db_query('SELECT order_id, line_item_id, quantity
                         FROM `commerce_product`, `commerce_line_item`,
                         `field_data_field_bosa_product_delta`
