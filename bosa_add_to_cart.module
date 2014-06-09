@@ -513,10 +513,9 @@ function bosa_add_to_cart_cart_form_default_validate($form, $form_state,$order) 
     $product = commerce_product_load($product_id);
     $delta = $line_item_wrapper->field_bosa_product_delta->value();
     $seats = bosa_reserved_seats_available($product_id,$delta);
+
     if($cancel_info = bosa_reserved_bosa_product_order_info($product_id,$delta)) {
-        foreach($cancel_info as $cancel) {
-          $attendee += $cancel['quantity'];
-        }
+      $attendee = bosa_reserved_get_quantity_by_orders($cancel_info);
     }
     if ($seats < 0) {
       form_set_error("seats_error", t('The minimum quantity of %title that can be purchased is %max.',
