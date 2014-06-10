@@ -113,7 +113,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
         if($stock == 0 && is_numeric($stock)) {
           $disabled = TRUE;
         }
-        if($stock == "all" && !is_numeric($stock)) {
+        if($stock == "Alle" && !is_numeric($stock)) {
           $stock = "-";
           $disabled = FALSE;
         }
@@ -359,10 +359,10 @@ function bosa_add_to_cart_form_validate($form, &$form_state){
       if($select) {
         $product = commerce_product_load($prod_id);
         $seats = bosa_reserved_seats_available($prod_id, $key);
-        if($seats <= 0 && $seats != "all") {
+        if($seats <= 0 && $seats != "Alle") {
           form_set_error('error', t('Der er ingen pladser tilbage'));
         }
-        if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "all") {
+        if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "Alle") {
           form_set_error('error',t('The maximum quantity of '. $product->title . " that can be purchased is ". $seats));
         }
         $prod_ids[] = $key;

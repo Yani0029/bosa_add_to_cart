@@ -28,7 +28,7 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
       $count = reset($result);
     }
     if ($info[$delta]['product_stock'] == 0) {
-      $seats = "all";
+      $seats = (string)"Alle";
     }
     else {
       $seats = (int)($info[$delta]['product_stock'] - $count);
@@ -56,7 +56,7 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
   }
   // Product type that does not contain a stock field.
   else {
-    return 'all';
+    return 'Alle';
   }
 }
 /*
