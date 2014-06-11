@@ -113,7 +113,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
         if($stock == 0 && is_numeric($stock)) {
           $disabled = TRUE;
         }
-        if($stock == "all" && !is_numeric($stock)) {
+        if($stock == "Alle" && !is_numeric($stock)) {
           $stock = "-";
           $disabled = FALSE;
         }
@@ -279,8 +279,14 @@ function bosa_add_to_cart_products_builder($node) {
       // The new "BOSA product" type.
       if(isset($product->field_product_date_and_stock)) {
         $info = field_get_items('commerce_product', $product, 'field_product_date_and_stock');
+        $last_min = field_get_items('commerce_product', $product, 'field_product_last_mins');
 
         foreach ($info as $key => $value) {
+          $time_tmp = strtotime($value['product_date']) - $last_min[0]['value'] * 60 * 60;
+          // If the time is later than the last date for product selling.
+          if (time() > $time_tmp && !$value['product_wdate']) {
+            continue;
+          }
           $date_2 = strtotime($value['product_date']);
           $stock = bosa_reserved_seats_available($prod_id,$key);
           $date_2 = date('D, d/m/Y - H:i', $date_2);
@@ -353,10 +359,10 @@ function bosa_add_to_cart_form_validate($form, &$form_state){
       if($select) {
         $product = commerce_product_load($prod_id);
         $seats = bosa_reserved_seats_available($prod_id, $key);
-        if($seats <= 0 && $seats != "all") {
+        if($seats <= 0 && $seats != "Alle") {
           form_set_error('error', t('Der er ingen pladser tilbage'));
         }
-        if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "all") {
+        if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "Alle") {
           form_set_error('error',t('The maximum quantity of '. $product->title . " that can be purchased is ". $seats));
         }
         $prod_ids[] = $key;
@@ -513,10 +519,9 @@ function bosa_add_to_cart_cart_form_default_validate($form, $form_state,$order) 
     $product = commerce_product_load($product_id);
     $delta = $line_item_wrapper->field_bosa_product_delta->value();
     $seats = bosa_reserved_seats_available($product_id,$delta);
+
     if($cancel_info = bosa_reserved_bosa_product_order_info($product_id,$delta)) {
-        foreach($cancel_info as $cancel) {
-          $attendee += $cancel['quantity'];
-        }
+      $attendee = bosa_reserved_get_quantity_by_orders($cancel_info);
     }
     if ($seats < 0) {
       form_set_error("seats_error", t('The minimum quantity of %title that can be purchased is %max.',

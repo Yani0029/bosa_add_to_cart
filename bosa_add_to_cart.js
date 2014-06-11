@@ -1,23 +1,27 @@
 jQuery(document).ready(function($){
   var qty = $('.bosa-product-reference_row').length;
+
   var part = Math.floor(qty/6);
   if (part == 1 && qty > 6) {
     part = 2;
   }
-
   $('.bosa_view_later').show();
   $('.bosa_view_later').click(function(event){
-    for (var i=0; i<= part; i++) {
+    for (var i=0; i< part; i++) {
+
       var next = i + 1;
       var prev = i-1;
       if($('.bosa_part_'+i).css('display') == 'block'){
-        if (i !== (part-1)) {
-          $('.bosa_part_'+i).hide();
-        }
-        $('.bosa_view_earlier').show();
         $('.bosa_part_'+next).show();
+        $('.bosa_part_'+i).hide();
+        if (i >= 0) {
+          $('.bosa_view_earlier').show();
+        }
 
-        if (i== (part -1)) {
+        if (i== (part-1)) {
+          $('.bosa_part_'+i).show();
+        }
+        if (i == (part-2)) {
           $('.bosa_view_later').hide();
         }
         break;
@@ -25,22 +29,19 @@ jQuery(document).ready(function($){
     }
     return false;
   });
-   $('.bosa_view_earlier').click(function(event){
-    for (var i=0; i<= part; i++) {
+  $('.bosa_view_earlier').click(function(event){
+    for (var i=0; i< part; i++) {
       var next = i + 1;
       var prev = i-1;
-      if($('.bosa_part_'+prev).css('display') == 'none'){
-        $('.bosa_view_earlier').show();
-      }
       if($('.bosa_part_'+i).css('display') == 'block'){
-        if (i !== 0) {
-          $('.bosa_part_'+i).hide();
-        }
-        if (i == 0) {
+        $('.bosa_part_'+prev).show();
+        $('.bosa_part_'+i).hide();
+        if (i == 1) {
           $('.bosa_view_earlier').hide();
         }
+
         $('.bosa_view_later').show();
-        $('.bosa_part_'+prev).show();
+
         break;
       }
     }

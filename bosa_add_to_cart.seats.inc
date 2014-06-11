@@ -28,7 +28,7 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
       $count = reset($result);
     }
     if ($info[$delta]['product_stock'] == 0) {
-      $seats = "all";
+      $seats = (string)"Alle";
     }
     else {
       $seats = (int)($info[$delta]['product_stock'] - $count);
@@ -56,7 +56,7 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
   }
   // Product type that does not contain a stock field.
   else {
-    return 'all';
+    return 'Alle';
   }
 }
 /*
@@ -96,6 +96,15 @@ function bosa_reserved_bosa_product_order_info($product_id,$delta = NULL){
   return $cancel_orders;
 }
 
+function bosa_reserved_get_quantity_by_orders($cancel_orders){
+  $attendee = 0;
+  if($cancel_orders) {
+    foreach($cancel_orders as $cancel) {
+      $attendee += $cancel['quantity'];
+    }
+  }
+  return (int)$attendee;
+}
 function bosa_reserved_delta_check_by_line_item($line_item_id) {
   $info = array();
   $query = db_query('SELECT `line_item_id`,`field_bosa_product_delta_value`
