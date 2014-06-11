@@ -258,7 +258,7 @@ function bosa_add_to_cart_products_builder($node) {
       $wrapper = entity_metadata_wrapper('commerce_product', $product);
       $price_1 = commerce_product_calculate_sell_price($product);
       $price = commerce_currency_format($price_1['amount'], $price_1['currency_code'], $product);
-      if ($wrapper->field_2nd_price->value()) {
+      if (isset($product->field_2nd_price['und'])) {
         $second_price = $wrapper->field_2nd_price->amount->value();
         $current_currency = commerce_multicurrency_get_user_currency_code();
         $second_price = commerce_currency_convert($second_price, "DKK", $current_currency);
