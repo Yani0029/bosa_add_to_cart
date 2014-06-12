@@ -40,19 +40,8 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
 
   // Other product type with commerce_stock
   if($seats_field = field_get_items('commerce_product', $product, 'commerce_stock')){
-    $query = db_query('SELECT SUM(quantity) as quantity FROM `commerce_product` p, `commerce_line_item`l,`commerce_order` o
-                       WHERE p.sku = l.line_item_label AND o.`status` <> :canceled
-                       AND o.order_id = l.order_id
-                       AND `product_id`= :product_id',
-                      array(':canceled' => 'canceled',':product_id' => $product_id));
-
-    $result = $query->fetch();
-    if($result){
-      $count = reset($result);
-    }
     $seats = $seats_field[0]['value'];
-    $seats_available = $seats - $count;
-    return (int)$seats_available;
+    return (int)$seats;
   }
   // Product type that does not contain a stock field.
   else {
