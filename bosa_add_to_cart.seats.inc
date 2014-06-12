@@ -16,12 +16,12 @@ function bosa_reserved_seats_available($product_id,$delta = 0){
     $query = db_query('SELECT SUM(quantity) AS quantity FROM `commerce_product` p, `commerce_line_item` l,`commerce_order` o,
                       `field_data_field_bosa_product_delta`
                        WHERE sku = line_item_label
-                       AND o.`status` <> :canceled
+                       AND o.`status` = :completed
                        AND o.order_id = l.order_id
                        AND `product_id` = :product_id
                        AND`line_item_id` = `entity_id`
                        AND `field_bosa_product_delta_value` = :delta',
-                    array(':canceled' => 'canceled',':product_id' => $product_id, ':delta' => $delta));
+                    array(':completed' => 'completed',':product_id' => $product_id, ':delta' => $delta));
 
     $result = $query->fetch();
     if($result){
