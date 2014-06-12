@@ -517,6 +517,7 @@ function bosa_add_to_cart_cart_form_default_validate($form, $form_state,$order) 
     $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
     $product_id = $line_item_wrapper->commerce_product->product_id->value();
     $product = commerce_product_load($product_id);
+    if($product->type == "bosa_produkt") {
     $delta = $line_item_wrapper->field_bosa_product_delta->value();
     $seats = bosa_reserved_seats_available($product_id,$delta);
 
@@ -527,6 +528,7 @@ function bosa_add_to_cart_cart_form_default_validate($form, $form_state,$order) 
       form_set_error("seats_error", t('The minimum quantity of %title that can be purchased is %max.',
                                       array('%title' => $product->title, '%max' => $attendee)));
       $found_errors = TRUE;
+    }
     }
   }
   // if out of stock items send back to the cart form
