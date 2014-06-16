@@ -65,7 +65,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
         //$total += count($all_elements);
       }
     }
-    if($all_elements[0]['price_2_amount']) {
+    if($all_elements[0]['price_2']) {
       $text = '<div class="adult">Voksen:</div><div class="child">Barn:</div>';
     }
     else {
@@ -168,7 +168,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#markup' => $price,
           '#suffix' => "</div>",
         );
-        if ($price_2_amount) {
+        if ($price_2) {
         $form['bosa_add_to_cart'][$prod_id][$delta][1]['bosa_add_to_cart_price2_'.$prod_id] = array(
           '#prefix' => '<div class= "child">',
           '#type' => 'item',
@@ -212,7 +212,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
       '#default_value' => "-",
       '#suffix' => '<span class = "text_price">' . $price .'</span></div>'
     );
-    if ($price_2_amount) {
+    if ($price_2) {
       $form['bosa_add_to_cart_2']['bosa_children_amount'] = array(
         '#type' => 'textfield',
         '#prefix' => '<div class= "bosa_cart_amount">',
