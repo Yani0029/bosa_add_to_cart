@@ -47,36 +47,79 @@ jQuery(document).ready(function($){
     }
     return false;
   });
+
+
+  // function for Price calculation
   var calculatePrice = function(){
-  var allcheckboxs =  $('.bosa-product-reference input');
-  var items = $('.bosa_cart_amount_all input');
-  var summary = $('#edit-total-price');
-  var price = 0;
-  items.each(function(){
-    var cnt = parseInt($(this).val());
-    if(cnt>10000){
-      cnt = 10000;
-      $(this).val(cnt)
-    }else if(cnt<0){
-      cnt = 1;
-      $(this).val(cnt)
-    }
-    var p=parseInt($(this).attr('data-price'))*cnt;
+    var allcheckboxs =  $('.bosa-product-reference input');
+    var items = $('.bosa_cart_amount_all input');
+    var summary = $('#edit-total-price');
+    var price = 0;
 
-    if(!isNaN(p)) {
-      price+=p;
-    }
-   });
+    // Disable/enable multi input field
+    var multicheckbox = $('.bosa-product-reference .multi input');
+    var normalcheckbox = $('.bosa-product-reference .normal input');
 
-  if(allcheckboxs.size()>0){
-    var cnt = allcheckboxs.filter(':checked').size();
-    price*=cnt;
-  }
-  var pris = (price/100).toFixed(2).toString().replace(".", ",");
-  summary.text(pris);
-  //console.log(p);
+    var qty_multi = multicheckbox.filter(':checked').size();
+
+    if (qty_multi) {
+        price = 0;
+        $('.normal-amount input').prop("value", "-");
+        $('.normal-amount input').css('display','none');
+        normalcheckbox.attr('disabled','disabled');
+        $('.multi-amount input').css('display','initial');
+        normalcheckbox.prop('checked', false);
+        $('.multi-amount input').each(function(){
+      var cnt = parseInt($(this).val());
+      if(cnt>10000){
+        cnt = 10000;
+        $(this).val(cnt)
+      }else if(cnt<0){
+        cnt = 1;
+        $(this).val(cnt)
+      }
+      var p=parseInt($(this).attr('data-price'))*cnt;
+
+      if(!isNaN(p)) {
+        price+=p;
+      }
+      });
+        price*=qty_multi;
+    }
+    else {
+        $('.normal-amount input').css('display','initial');
+        $('.multi-amount input').prop("value", "-");
+        $('.multi-amount input').css('display','none');
+        $('.bosa-product-reference .normal input').attr('disabled','');
+        $('.bosa-product-reference .form-disabled input').attr('disabled','disabled');
+        multicheckbox.prop('checked', false);
+
+      $('.normal-amount input').each(function(){
+      var cnt = parseInt($(this).val());
+      if(cnt>10000){
+        cnt = 10000;
+        $(this).val(cnt)
+      }else if(cnt<0){
+        cnt = 1;
+        $(this).val(cnt)
+      }
+      var p=parseInt($(this).attr('data-price'))*cnt;
+
+      if(!isNaN(p)) {
+        price+=p;
+      }
+      });
+      if(allcheckboxs.size()>0){
+          var cnt = allcheckboxs.filter(':checked').size();
+          price*=cnt;
+      }
+    }
+
+    var pris = (price/100).toFixed(2).toString().replace(".", ",");
+      summary.text(pris);
   }
 
   $('#bosa-add-to-cart-form input').live("keyup change",calculatePrice);
   calculatePrice();
+
 });

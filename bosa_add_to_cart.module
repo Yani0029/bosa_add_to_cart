@@ -55,6 +55,8 @@ function bosa_add_to_cart_form($form, &$form_state) {
   }
 
   $total = 0;
+  $text = '<div class="price">Pris:</div>';
+  $child_price = FALSE;
   foreach ($form_elements as $pid => $all_elements) {
     foreach($all_elements as $key =>$elements) {
       if($elements['status']){
@@ -64,14 +66,16 @@ function bosa_add_to_cart_form($form, &$form_state) {
         $title = $elements['date'];
         //$total += count($all_elements);
       }
+      if($elements['price_2']) {
+        $child_price = TRUE;
+        $text = '<div class="adult">Voksen:</div><div class="child">Barn:</div>';
+      }
+      if($child_price && !$elements['price_2']) {
+        $multi_products = TRUE;
+      }
     }
-    if($all_elements[0]['price_2']) {
-      $text = '<div class="adult">Voksen:</div><div class="child">Barn:</div>';
-    }
-    else {
-      $text = '<div class="price">Pris:</div>';
-    }
-    if($wdate ) {
+
+    if($wdate) {
       $text2 = 'Product:';
     }
     else {
@@ -100,6 +104,19 @@ function bosa_add_to_cart_form($form, &$form_state) {
     foreach($form_elements as $pid => $all_elements) {
       // Foreach product that contains multi date.
       foreach ($all_elements as $key => $elements) {
+        if(isset($multi_products) && $multi_products && $price != $elements['price']) {
+          $ad_price = $price;
+          $ch_price = $price_2;
+          $multi_price = $elements['price'];
+        }
+        elseif ($price != '' && $elements['price_2']) {
+          $ad_price = $elements['price'];
+          $ch_price = $elements['price_2'];
+        }
+
+        if(!$child_price) {
+          $ad_price = $price;
+        }
         $prod_id = $elements['prod_id'];
         $date = $elements['date'];
         $stock = $elements['stock'];
@@ -136,10 +153,12 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#prefix' => '<div class="' . $prefix_class .'">',
           '#suffix' => '</div>',
         );
+        $class = ($ad_price != $elements['price'] && $ad_price != '' && $multi_products) ? "multi" : "normal";
         $form['bosa_add_to_cart'][$prod_id][$delta][1]['selected'] = array(
-          '#prefix' => '<div class= "product-checkbox">',
+          '#prefix' => '<div class= "product-checkbox '.$class.'">',
           '#type' => 'checkbox',
           '#suffix' => "</div>",
+          '#title' => ($ad_price != $elements['price'] && $ad_price != '' && $multi_products) ? "*" : "",
           "#disabled" => $disabled,
         );
         if($elements['wdate']) {
@@ -168,7 +187,7 @@ function bosa_add_to_cart_form($form, &$form_state) {
           '#markup' => $price,
           '#suffix' => "</div>",
         );
-        if ($price_2) {
+        if ($child_price) {
         $form['bosa_add_to_cart'][$prod_id][$delta][1]['bosa_add_to_cart_price2_'.$prod_id] = array(
           '#prefix' => '<div class= "child">',
           '#type' => 'item',
@@ -202,26 +221,39 @@ function bosa_add_to_cart_form($form, &$form_state) {
       '#prefix' => '<div class= "bosa_cart_amount_all">',
       '#suffix' => '</div>',
     );
-
+    $ad_amount = str_replace(',','',$ad_price);
     $form['bosa_add_to_cart_2']['bosa_adults_amount'] = array(
       '#type' => 'textfield',
-      '#prefix' => '<div class= "bosa_cart_amount">',
+      '#prefix' => '<div class= "bosa_cart_amount normal-amount">',
       '#size' => '4',
       '#title' => $title,
-      '#attributes' => array('data-price' => $price_amount),
+      '#attributes' => array('data-price' => (int)str_replace(' kr.','',$ad_amount)),
       '#default_value' => "-",
-      '#suffix' => '<span class = "text_price">' . $price .'</span></div>'
+      '#suffix' => '<span class = "text_price">' . $ad_price .'</span></div>'
     );
-    if ($price_2) {
+    if ($child_price) {
+      $ch_amount = str_replace(',','',$ch_price);
       $form['bosa_add_to_cart_2']['bosa_children_amount'] = array(
         '#type' => 'textfield',
-        '#prefix' => '<div class= "bosa_cart_amount">',
+        '#prefix' => '<div class= "bosa_cart_amount normal-amount">',
         '#size' => '4',
-        '#attributes' => array('data-price' =>$price_2_amount),
+        '#attributes' => array('data-price' =>(int)str_replace(' kr.','',$ch_amount)),
         '#title' => t('Children'),
         '#default_value' => "-",
-        '#suffix' => '<span class = "text_price">' . $price_2 . '</span></div>'
-     );
+        '#suffix' => '<span class = "text_price">' . $ch_price . '</span></div>'
+      );
+    }
+    if (isset($multi_products) && $multi_products) {
+      $mul_amount = str_replace(',','',$multi_price);
+      $form['bosa_add_to_cart_2']['bosa_multi_amount'] = array(
+        '#type' => 'textfield',
+        '#prefix' => '<div class= "bosa_cart_amount multi-amount">',
+        '#size' => '4',
+        '#attributes' => array('data-price' => (int)str_replace(' kr.','',$mul_amount)),
+        '#title' => t('Quantity') ." *",
+        '#default_value' => "-",
+        '#suffix' => '<span class = "text_price">' . $multi_price . '</span></div>'
+      );
     }
     $current_currency = commerce_multicurrency_get_user_currency_code();
     $cur=commerce_currency_load($current_currency);
@@ -356,7 +388,8 @@ function bosa_add_to_cart_form_validate($form, &$form_state){
   $prod_ids = array();
   $adults = $form_state['values']['bosa_adults_amount'];
   $children = isset($form_state['values']['bosa_children_amount']) ? $form_state['values']['bosa_children_amount'] : "-";
-  if (($adults == "-" || $adults == "") && $children == "-") {
+  $multi = $form_state['values']['bosa_multi_amount'];
+  if (($adults == "-" || $adults == "") && $children == "-" && $multi == "-") {
     form_set_error('error', t('You have not input number(s)'));
   }
   foreach($form_state['values']['bosa_add_to_cart'] as $prod_id => $prods) {
@@ -371,6 +404,9 @@ function bosa_add_to_cart_form_validate($form, &$form_state){
         if ((int)($adults + $children) > $seats && $seats >= 0 && $seats != "Alle") {
           form_set_error('error',t('The maximum quantity of '. $product->title . " that can be purchased is ". $seats));
         }
+        elseif ((int)$multi > $seats && $seats >= 0 && $seats != "Alle") {
+          form_set_error('error',t('The maximum quantity of '. $product->title . " that can be purchased is ". $seats));
+        }
         $prod_ids[] = $key;
       }
     }
@@ -383,14 +419,9 @@ function bosa_add_to_cart_form_validate($form, &$form_state){
 function bosa_add_to_cart_form_submit($form, &$form_state) {
   global $user;
   $prod_ids = array();
-  $adults = $form_state['values']['bosa_adults_amount'];
-  $children = isset($form_state['values']['bosa_children_amount']) ? $form_state['values']['bosa_children_amount'] : "-";
-  if($adults == "-" && $children != "-") {
-    $adults = 0;
-  }
-  elseif($adults != "-" && $children == "-") {
-    $children = 0;
-  }
+  $adults = ($form_state['values']['bosa_adults_amount'] != "-") ? $form_state['values']['bosa_adults_amount'] : 0;
+  $children = ($form_state['values']['bosa_children_amount'] != "-") ? $form_state['values']['bosa_children_amount'] : 0;
+  $multi = ($form_state['values']['bosa_multi_amount'] != "-") ? $form_state['values']['bosa_multi_amount'] : 0;
 
   foreach($form_state['values']['bosa_add_to_cart'] as $prod_id => $prods) {
     foreach ($prods as $key => $prod) {
@@ -411,9 +442,14 @@ function bosa_add_to_cart_form_submit($form, &$form_state) {
         $prod_delta = 0;
 
       }
-      if ($select && $adults) {
-
-        $line_item = commerce_product_line_item_new($product,$adults,0);
+      if ($select && !$children) {
+        if($adults) {
+          $line_item = commerce_product_line_item_new($product,$adults,0);
+        }
+        elseif ($multi) {
+          $line_item = commerce_product_line_item_new($product,$multi,0);
+        }
+        else continue;
         $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
         $line_item_wrapper->field_bosa_selected_date = $selected_date;
         $line_item_wrapper->field_bosa_product_delta = $prod_delta;
